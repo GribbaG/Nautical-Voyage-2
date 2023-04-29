@@ -21,14 +21,32 @@ public class Player : MonoBehaviour
 
     [HideInInspector] public bool isFacingRight;
 
+    [Header("References")]
     private Rigidbody2D rb;
     private Collider2D coll;
     private Animator anim;
-    private float moveInput;
+    [SerializeField] private TrailRenderer tr;
 
+    //jump stuff
+    private float moveInput;
     private bool isJumping;
     private bool isFalling;
     private float jumpTimeCounter;
+
+    //coyote timer
+    private float coyoteTime = 0.2f;
+    private float coyoteTimeCounter;
+
+    //jump buffer
+    private float jumpBufferTime = 0.1f;
+    private float jumpBufferCounter;
+
+    //dash
+    private bool canDash = true;
+    private bool isDashing;
+    private float dashingPower = 24f;
+    private float dashingTime = 0.2f;
+    private float dashingCooldown = 1f;
 
     private RaycastHit2D groundHit;
 
@@ -41,13 +59,29 @@ public class Player : MonoBehaviour
         StartDirectionCheck();
     }
 
-    #region Movement Functions
-
     private void Update()
     {
+        if (isDashing)
+        {
+            return;
+        }
+
         Move();
         Jump();
+        CoyoteTimeCheck();
+        JumpBufferCheck();
+        DashCheck();
     }
+
+    private void FixedUpdate()
+    {
+        if (isDashing)
+        {
+            return;
+        }
+    }
+
+    #region Movement Functions
 
     private void Move()
     {
@@ -70,11 +104,12 @@ public class Player : MonoBehaviour
     private void Jump()
     {
         //button was pushed this frame
-        if (UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame() && IsGrounded())
+        if (jumpBufferCounter >0f && coyoteTimeCounter >0f)
         {
             isJumping = true;
             jumpTimeCounter = jumpTime;
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            jumpBufferCounter = 0f;
         }
 
         //button is being held
@@ -95,6 +130,62 @@ public class Player : MonoBehaviour
         //button was released this frame
         if (UserInput.instance.controls.Jumping.Jump.WasReleasedThisFrame())
         {
+            isJumping = false;
+            coyoteTimeCounter = 0f;
+        }
+    }
+
+    private void CoyoteTimeCheck()
+    {
+        if (IsGrounded())
+        {
+            coyoteTimeCounter = coyoteTime;
+        }
+
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime;
+        }
+    }
+
+    private void JumpBufferCheck()
+    {
+        if (UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame())
+        {
+            jumpBufferCounter = jumpBufferTime;
+        }
+
+        else
+        {
+            jumpBufferCounter -= Time.deltaTime;
+        }
+    }
+
+    #endregion
+
+    #region Movement Abilities
+
+    private IEnumerator Dash()
+    {
+        canDash = false;
+        isDashing = true;
+        float originalGravity = rb.gravityScale;
+        rb.gravityScale = 0f;
+        rb.velocity = new Vector2(transform.right.x * dashingPower, 0f);
+        tr.emitting = true;
+        yield return new WaitForSeconds(dashingTime);
+        tr.emitting = false;
+        rb.gravityScale = originalGravity;
+        isDashing = false;
+        yield return new WaitForSeconds(dashingCooldown);
+        canDash = true;
+    }
+
+    private void DashCheck()
+    {
+        if (UserInput.instance.controls.Dashing.Dash.WasPressedThisFrame() && canDash)
+        {
+            StartCoroutine(Dash());
             isJumping = false;
         }
     }

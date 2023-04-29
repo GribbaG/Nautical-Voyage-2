@@ -298,6 +298,45 @@ public partial class @Controls: IInputActionCollection2, IDisposable
                     ""isPartOfComposite"": false
                 }
             ]
+        },
+        {
+            ""name"": ""Dashing"",
+            ""id"": ""a70d4feb-e0e8-4059-a30e-539e4688a455"",
+            ""actions"": [
+                {
+                    ""name"": ""Dash"",
+                    ""type"": ""PassThrough"",
+                    ""id"": ""7e8fc22f-8afb-4d67-ab04-0675ecfd2ec1"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                }
+            ],
+            ""bindings"": [
+                {
+                    ""name"": """",
+                    ""id"": ""de9f02a0-8313-4df5-a270-7691fe0b9b43"",
+                    ""path"": ""<Keyboard>/shift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard"",
+                    ""action"": ""Dash"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b49f17ea-bff1-4430-9e50-2588c9b8c8eb"",
+                    ""path"": ""<Gamepad>/rightTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Dash"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                }
+            ]
         }
     ],
     ""controlSchemes"": [
@@ -319,6 +358,9 @@ public partial class @Controls: IInputActionCollection2, IDisposable
         // Jumping
         m_Jumping = asset.FindActionMap("Jumping", throwIfNotFound: true);
         m_Jumping_Jump = m_Jumping.FindAction("Jump", throwIfNotFound: true);
+        // Dashing
+        m_Dashing = asset.FindActionMap("Dashing", throwIfNotFound: true);
+        m_Dashing_Dash = m_Dashing.FindAction("Dash", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -468,6 +510,52 @@ public partial class @Controls: IInputActionCollection2, IDisposable
         }
     }
     public JumpingActions @Jumping => new JumpingActions(this);
+
+    // Dashing
+    private readonly InputActionMap m_Dashing;
+    private List<IDashingActions> m_DashingActionsCallbackInterfaces = new List<IDashingActions>();
+    private readonly InputAction m_Dashing_Dash;
+    public struct DashingActions
+    {
+        private @Controls m_Wrapper;
+        public DashingActions(@Controls wrapper) { m_Wrapper = wrapper; }
+        public InputAction @Dash => m_Wrapper.m_Dashing_Dash;
+        public InputActionMap Get() { return m_Wrapper.m_Dashing; }
+        public void Enable() { Get().Enable(); }
+        public void Disable() { Get().Disable(); }
+        public bool enabled => Get().enabled;
+        public static implicit operator InputActionMap(DashingActions set) { return set.Get(); }
+        public void AddCallbacks(IDashingActions instance)
+        {
+            if (instance == null || m_Wrapper.m_DashingActionsCallbackInterfaces.Contains(instance)) return;
+            m_Wrapper.m_DashingActionsCallbackInterfaces.Add(instance);
+            @Dash.started += instance.OnDash;
+            @Dash.performed += instance.OnDash;
+            @Dash.canceled += instance.OnDash;
+        }
+
+        private void UnregisterCallbacks(IDashingActions instance)
+        {
+            @Dash.started -= instance.OnDash;
+            @Dash.performed -= instance.OnDash;
+            @Dash.canceled -= instance.OnDash;
+        }
+
+        public void RemoveCallbacks(IDashingActions instance)
+        {
+            if (m_Wrapper.m_DashingActionsCallbackInterfaces.Remove(instance))
+                UnregisterCallbacks(instance);
+        }
+
+        public void SetCallbacks(IDashingActions instance)
+        {
+            foreach (var item in m_Wrapper.m_DashingActionsCallbackInterfaces)
+                UnregisterCallbacks(item);
+            m_Wrapper.m_DashingActionsCallbackInterfaces.Clear();
+            AddCallbacks(instance);
+        }
+    }
+    public DashingActions @Dashing => new DashingActions(this);
     private int m_KeyboardSchemeIndex = -1;
     public InputControlScheme KeyboardScheme
     {
@@ -493,5 +581,9 @@ public partial class @Controls: IInputActionCollection2, IDisposable
     public interface IJumpingActions
     {
         void OnJump(InputAction.CallbackContext context);
+    }
+    public interface IDashingActions
+    {
+        void OnDash(InputAction.CallbackContext context);
     }
 }
