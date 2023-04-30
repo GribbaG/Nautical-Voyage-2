@@ -27,6 +27,9 @@ public class Player : MonoBehaviour
     private Animator anim;
     [SerializeField] private TrailRenderer tr;
 
+    [Header("Camera Stuff")]
+    [SerializeField] private GameObject _cameraFollowGO;
+
     //jump stuff
     private float moveInput;
     private bool isJumping;
@@ -48,7 +51,15 @@ public class Player : MonoBehaviour
     private float dashingTime = 0.2f;
     private float dashingCooldown = 1f;
 
+    //double jump
+    private bool doubleJump;
+
+    //ground detection
     private RaycastHit2D groundHit;
+
+    //camera stuff
+    private CameraFollowObject _cameraFollowObject;
+    private float _fallSpeedYDampingChangeThreshond;
 
     private void Start()
     {
@@ -57,6 +68,12 @@ public class Player : MonoBehaviour
         coll = GetComponent<Collider2D>();
 
         StartDirectionCheck();
+
+
+
+        _cameraFollowObject = _cameraFollowGO.GetComponent<CameraFollowObject>();
+
+        _fallSpeedYDampingChangeThreshond = CameraManager.instance._fallSpeedYDampingChangeThreshold;
     }
 
     private void Update()
@@ -71,6 +88,29 @@ public class Player : MonoBehaviour
         CoyoteTimeCheck();
         JumpBufferCheck();
         DashCheck();
+        DoubleJumpCheck();
+        FallCheck();
+        CheckForLand();
+
+        if (CheckForLand())
+        {
+            anim.SetTrigger("landed");
+        }
+
+        //if we are falling past a certain speed threshold
+        if (rb.velocity.y < _fallSpeedYDampingChangeThreshond && !CameraManager.instance.IsLerpingYDamping && !CameraManager.instance.LerpedFromPlayerFalling)
+        {
+            CameraManager.instance.LerpYDamping(true);
+        }
+
+        //if we are standing still or moving up
+        if (rb.velocity.y >= 0f && !CameraManager.instance.IsLerpingYDamping && CameraManager.instance.LerpedFromPlayerFalling)
+        {
+            //reset so it can be called again
+            CameraManager.instance.LerpedFromPlayerFalling = false;
+
+            CameraManager.instance.LerpYDamping(false);
+        }
     }
 
     private void FixedUpdate()
@@ -104,12 +144,13 @@ public class Player : MonoBehaviour
     private void Jump()
     {
         //button was pushed this frame
-        if (jumpBufferCounter >0f && coyoteTimeCounter >0f)
+        if (jumpBufferCounter >0f && coyoteTimeCounter >0f || UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame() && doubleJump)
         {
             isJumping = true;
             jumpTimeCounter = jumpTime;
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             jumpBufferCounter = 0f;
+            doubleJump = !doubleJump;
         }
 
         //button is being held
@@ -119,6 +160,12 @@ public class Player : MonoBehaviour
             {
                 rb.velocity = new Vector2(rb.velocity.x, jumpForce);
                 jumpTimeCounter -= Time.deltaTime;
+                anim.SetTrigger("jump");
+            }
+
+            else if (jumpTimeCounter == 0)
+            {
+                isJumping = false;
             }
 
             else
@@ -130,8 +177,14 @@ public class Player : MonoBehaviour
         //button was released this frame
         if (UserInput.instance.controls.Jumping.Jump.WasReleasedThisFrame())
         {
+            isFalling = true;
             isJumping = false;
             coyoteTimeCounter = 0f;
+
+            if (!isJumping && CheckForLand())
+            {
+
+            }
         }
     }
 
@@ -158,6 +211,30 @@ public class Player : MonoBehaviour
         else
         {
             jumpBufferCounter -= Time.deltaTime;
+        }
+    }
+
+    private bool CheckForLand()
+    {
+        if (isFalling && IsGrounded())
+        {
+            //player has landed
+            anim.SetTrigger("landed");
+            isFalling = false;
+            return true;
+        }
+
+        else
+        {
+            return false;
+        }
+    }
+
+    private void FallCheck()
+    {
+        if (isFalling)
+        {
+            anim.SetTrigger("fall");
         }
     }
 
@@ -188,11 +265,28 @@ public class Player : MonoBehaviour
             StartCoroutine(Dash());
             isJumping = false;
         }
+
+        if (isDashing)
+        {
+            anim.SetBool("isDashing", true);
+        }
+        else
+        {
+            anim.SetBool("isDashing", false);
+        }
+    }
+    
+    private void DoubleJumpCheck()
+    {
+        if (IsGrounded() && !UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame())
+        {
+            doubleJump = true;
+        }
     }
 
     #endregion
 
-    #region Ground Check
+    #region Ground/Landed Check
 
     private bool IsGrounded()
     {
@@ -246,6 +340,9 @@ public class Player : MonoBehaviour
             Vector3 rotator = new Vector3(transform.rotation.x, 180f, transform.rotation.z);
             transform.rotation = Quaternion.Euler(rotator);
             isFacingRight = !isFacingRight;
+
+            //turn the camera follow object
+            _cameraFollowObject.CallReturn();
         }
 
         else
@@ -253,6 +350,9 @@ public class Player : MonoBehaviour
             Vector3 rotator = new Vector3(transform.rotation.x, 0f, transform.rotation.z);
             transform.rotation = Quaternion.Euler(rotator);
             isFacingRight = !isFacingRight;
+
+            //turn the camera follow object
+            _cameraFollowObject.CallReturn();
         }
     }
 
