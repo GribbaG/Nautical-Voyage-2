@@ -144,7 +144,7 @@ public class Player : MonoBehaviour
     private void Jump()
     {
         //button was pushed this frame
-        if (jumpBufferCounter >0f && coyoteTimeCounter >0f || UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame() && doubleJump)
+        if (jumpBufferCounter >0f && coyoteTimeCounter >0f || UserInput.instance.controls.Movement.Jump.WasPressedThisFrame() && doubleJump)
         {
             isJumping = true;
             jumpTimeCounter = jumpTime;
@@ -154,7 +154,7 @@ public class Player : MonoBehaviour
         }
 
         //button is being held
-        if (UserInput.instance.controls.Jumping.Jump.IsPressed())
+        if (UserInput.instance.controls.Movement.Jump.IsPressed())
         {
             if (jumpTimeCounter > 0 && isJumping)
             {
@@ -175,7 +175,7 @@ public class Player : MonoBehaviour
         }
 
         //button was released this frame
-        if (UserInput.instance.controls.Jumping.Jump.WasReleasedThisFrame())
+        if (UserInput.instance.controls.Movement.Jump.WasReleasedThisFrame())
         {
             isFalling = true;
             isJumping = false;
@@ -203,7 +203,7 @@ public class Player : MonoBehaviour
 
     private void JumpBufferCheck()
     {
-        if (UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame())
+        if (UserInput.instance.controls.Movement.Jump.WasPressedThisFrame())
         {
             jumpBufferCounter = jumpBufferTime;
         }
@@ -260,7 +260,7 @@ public class Player : MonoBehaviour
 
     private void DashCheck()
     {
-        if (UserInput.instance.controls.Dashing.Dash.WasPressedThisFrame() && canDash)
+        if (UserInput.instance.controls.Movement.Dash.WasPressedThisFrame() && canDash)
         {
             StartCoroutine(Dash());
             isJumping = false;
@@ -278,7 +278,7 @@ public class Player : MonoBehaviour
     
     private void DoubleJumpCheck()
     {
-        if (IsGrounded() && !UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame())
+        if (IsGrounded() && !UserInput.instance.controls.Movement.Jump.WasPressedThisFrame())
         {
             doubleJump = true;
         }

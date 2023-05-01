@@ -7,11 +7,14 @@ public class InputManager : MonoBehaviour
 {
     public static InputManager instance;
 
-    public bool MenuOpenCloseInput { get; private set; }
+    public static PlayerInput PlayerInput;
 
-    private PlayerInput _playerInput;
+    public bool MenuOpenCloseInput { get; private set; }
+    public bool UIMenuInputClose { get; private set; }
 
     private InputAction _menuOpenCloseAction;
+
+    private InputAction _UIMenuCloseAction;
 
     private void Awake()
     {
@@ -20,12 +23,15 @@ public class InputManager : MonoBehaviour
             instance = this;
         }
 
-        _playerInput = GetComponent<PlayerInput>();
-        _menuOpenCloseAction = _playerInput.actions["MenuOpenClose"];
+        PlayerInput = GetComponent<PlayerInput>();
+        _menuOpenCloseAction = PlayerInput.actions["MenuOpenClose"];
+        _UIMenuCloseAction = PlayerInput.actions["MenuOpenCloseUI"];
     }
 
     private void Update()
     {
         MenuOpenCloseInput = _menuOpenCloseAction.WasPressedThisFrame();
+
+        UIMenuInputClose = _UIMenuCloseAction.WasPressedThisFrame();
     }
 }
